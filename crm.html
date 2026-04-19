@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MM CRM</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+/* ───────────────────────────── RESET & VARS ───────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --orange:#f05a0e;
+  --orange-dim:#c44a0b;
+  --orange-glow:rgba(240,90,14,.18);
+  --bg:#0a0a0a;
+  --bg2:#111111;
+  --bg3:#181818;
+  --bg4:#222222;
+  --border:#2a2a2a;
+  --border2:#333333;
+  --text:#f5f5f5;
+  --text2:#aaaaaa;
+  --text3:#666666;
+  --green:#22c55e;
+  --yellow:#eab308;
+  --red:#ef4444;
+  --blue:#3b82f6;
+  --sidebar:240px;
+  --radius:10px;
+}
+html,body{height:100%;font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+button{cursor:pointer;font-family:'Barlow',sans-serif}
+input,textarea,select{font-family:'Barlow',sans-serif}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ───────────────────────────── LOGIN ───────────────────────────── */
+#login-screen{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:var(--bg);z-index:100;
+}
+.login-box{
+  width:380px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:40px 36px;
+  box-shadow:0 0 60px rgba(240,90,14,.08);
+}
+.login-logo{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:32px;
+  letter-spacing:2px;
+  color:var(--orange);
+  margin-bottom:4px;
+}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:32px}
+.login-label{font-size:12px;font-weight:600;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;display:block}
+.login-input{
+  width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;
+  padding:11px 14px;color:var(--text);font-size:14px;outline:none;
+  transition:border-color .2s;margin-bottom:16px;
+}
+.login-input:focus{border-color:var(--orange)}
+.login-btn{
+  width:100%;background:var(--orange);border:none;border-radius:8px;
+  padding:12px;color:#fff;font-size:15px;font-weight:700;letter-spacing:.5px;
+  transition:background .2s,transform .1s;margin-top:8px;
+}
+.login-btn:hover{background:var(--orange-dim)}
+.login-btn:active{transform:scale(.98)}
+.login-error{color:var(--red);font-size:13px;margin-top:10px;display:none}
+
+/* ───────────────────────────── LAYOUT ───────────────────────────── */
+#app{display:none;height:100%;flex-direction:row}
+#app.visible{display:flex}
+
+/* ── SIDEBAR ── */
+#sidebar{
+  width:var(--sidebar);min-width:var(--sidebar);height:100%;
+  background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+  transition:width .25s;
+}
+.sidebar-top{padding:20px 16px 12px;border-bottom:1px solid var(--border)}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--orange)}
+.brand span{color:var(--text2);font-size:11px;display:block;letter-spacing:1px;margin-top:-2px;font-family:'Barlow',sans-serif;font-weight:500}
+.nav-section{padding:8px 10px;flex:1;overflow-y:auto}
+.nav-label{font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;padding:12px 8px 4px}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;
+  cursor:pointer;transition:background .15s,color .15s;margin-bottom:2px;
+  color:var(--text2);font-size:14px;font-weight:500;border:none;background:transparent;width:100%;
+}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--orange-glow);color:var(--orange);font-weight:600}
+.nav-item .icon{font-size:16px;min-width:20px;text-align:center}
+.nav-badge{
+  margin-left:auto;background:var(--orange);color:#fff;
+  font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;
+}
+.sidebar-bottom{padding:12px 16px;border-top:1px solid var(--border)}
+.user-pill{display:flex;align-items:center;gap:10px}
+.user-avatar{
+  width:32px;height:32px;border-radius:50%;background:var(--orange);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;color:#fff;flex-shrink:0;
+}
+.user-name{font-size:13px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-role{font-size:11px;color:var(--text2)}
+.btn-logout{background:none;border:none;color:var(--text3);font-size:18px;padding:4px;border-radius:6px;transition:color .15s}
+.btn-logout:hover{color:var(--red)}
+
+/* ── MAIN ── */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{
+  height:52px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;
+}
+.topbar-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1.5px;color:var(--text)}
+.topbar-actions{display:flex;align-items:center;gap:10px}
+.content{flex:1;overflow-y:auto;padding:24px}
+
+/* ───────────────────────────── CARDS / UTILS ───────────────────────────── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.card-sm{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.flex{display:flex;align-items:center}
+.gap8{gap:8px}
+.gap12{gap:12px}
+.gap16{gap:16px}
+.mt8{margin-top:8px}
+.mt12{margin-top:12px}
+.mt16{margin-top:16px}
+.mt20{margin-top:20px}
+.mb8{margin-bottom:8px}
+.mb12{margin-bottom:12px}
+.mb16{margin-bottom:16px}
+.s-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;margin-bottom:4px}
+.s-sub{font-size:13px;color:var(--text2);margin-bottom:24px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+
+.stat-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px;display:flex;flex-direction:column;gap:8px;
+  position:relative;overflow:hidden;
+}
+.stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--orange);opacity:.6;
+}
+.stat-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text2)}
+.stat-value{font-family:'Bebas Neue',sans-serif;font-size:40px;letter-spacing:1px;line-height:1;color:var(--text)}
+.stat-change{font-size:12px;color:var(--text2)}
+.stat-change.up{color:var(--green)}
+.stat-change.dn{color:var(--red)}
+
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 16px;border-radius:8px;border:none;
+  font-size:13px;font-weight:600;transition:all .15s;
+}
+.btn-orange{background:var(--orange);color:#fff}
+.btn-orange:hover{background:var(--orange-dim)}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2)}
+.btn-ghost:hover{border-color:var(--text2);color:var(--text)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-icon{width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:16px;transition:all .15s}
+.btn-icon:hover{border-color:var(--orange);color:var(--orange)}
+
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.tag-green{background:rgba(34,197,94,.15);color:var(--green)}
+.tag-yellow{background:rgba(234,179,8,.15);color:var(--yellow)}
+.tag-red{background:rgba(239,68,68,.15);color:var(--red)}
+.tag-blue{background:rgba(59,130,246,.15);color:var(--blue)}
+.tag-orange{background:var(--orange-glow);color:var(--orange)}
+.tag-gray{background:var(--bg4);color:var(--text2)}
+
+input.field,textarea.field,select.field{
+  background:var(--bg3);border:1px solid var(--border2);border-radius:8px;
+  padding:9px 12px;color:var(--text);font-size:14px;outline:none;width:100%;
+  transition:border-color .15s;
+}
+input.field:focus,textarea.field:focus,select.field:focus{border-color:var(--orange)}
+textarea.field{resize:vertical;min-height:80px}
+select.field option{background:var(--bg3)}
+.field-label{font-size:12px;font-weight:600;color:var(--text2);letter-spacing:.4px;text-transform:uppercase;margin-bottom:5px;display:block}
+.field-row{margin-bottom:14px}
+
+/* ───────────────────────────── MODAL ───────────────────────────── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{
+  background:var(--bg2);border:1px solid var(--border2);border-radius:14px;
+  padding:28px;min-width:420px;max-width:540px;width:90%;
+  transform:translateY(12px);transition:transform .2s;
+}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px}
+.modal-close{background:none;border:none;color:var(--text3);font-size:20px;padding:4px;border-radius:6px;transition:color .15s;line-height:1}
+.modal-close:hover{color:var(--text)}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* toast */
+#toast{
+  position:fixed;bottom:24px;right:24px;z-index:500;
+  background:var(--bg3);border:1px solid var(--border2);
+  border-left:3px solid var(--orange);border-radius:8px;
+  padding:12px 16px;font-size:13px;font-weight:500;
+  opacity:0;transform:translateX(20px);transition:all .25s;pointer-events:none;
+  max-width:280px;
+}
+#toast.show{opacity:1;transform:translateX(0)}
+#toast.success{border-left-color:var(--green)}
+#toast.error{border-left-color:var(--red)}
+
+/* ─────────────── DASHBOARD ─────────────── */
+.activity-list{margin-top:4px}
+.activity-item{
+  display:flex;align-items:flex-start;gap:12px;padding:10px 0;
+  border-bottom:1px solid var(--border);
+}
+.activity-item:last-child{border-bottom:none}
+.activity-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.activity-text{font-size:13px;color:var(--text2);line-height:1.4}
+.activity-text strong{color:var(--text);font-weight:600}
+.activity-time{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* ─────────────── CONVERSAS ─────────────── */
+#page-conversas .chat-layout{
+  display:grid;grid-template-columns:300px 1fr;height:calc(100vh - 100px);
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;
+}
+.conv-list{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.conv-search{padding:12px;border-bottom:1px solid var(--border)}
+.conv-search input{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;outline:none;width:100%}
+.conv-search input:focus{border-color:var(--orange)}
+.conv-filter-tabs{display:flex;padding:8px 12px;gap:6px;border-bottom:1px solid var(--border)}
+.conv-tab{padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;border:none;background:transparent;color:var(--text3);cursor:pointer;transition:all .15s}
+.conv-tab.active{background:var(--orange-glow);color:var(--orange)}
+.conv-items{overflow-y:auto;flex:1}
+.conv-item{
+  display:flex;align-items:flex-start;gap:10px;padding:12px;
+  cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s;
+}
+.conv-item:hover{background:var(--bg3)}
+.conv-item.active{background:var(--orange-glow)}
+.conv-avatar{
+  width:40px;height:40px;border-radius:50%;background:var(--bg4);
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:700;flex-shrink:0;color:var(--text2);
+}
+.conv-info{flex:1;min-width:0}
+.conv-name{font-size:13px;font-weight:600;margin-bottom:2px;display:flex;align-items:center;justify-content:space-between}
+.conv-time{font-size:11px;color:var(--text3)}
+.conv-preview{font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conv-unread{background:var(--orange);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:20px;flex-shrink:0}
+
+/* chat panel */
+.chat-panel{display:flex;flex-direction:column;overflow:hidden}
+.chat-header{
+  display:flex;align-items:center;gap:12px;padding:12px 16px;
+  border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.chat-contact-info{flex:1}
+.chat-contact-name{font-size:14px;font-weight:700}
+.chat-contact-status{font-size:12px;color:var(--text2)}
+.chat-actions{display:flex;gap:8px}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.chat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text3);gap:8px}
+.chat-empty .icon{font-size:36px}
+.chat-empty p{font-size:13px}
+.msg{display:flex;flex-direction:column;max-width:70%}
+.msg.incoming{align-self:flex-start}
+.msg.outgoing{align-self:flex-end;align-items:flex-end}
+.msg-bubble{
+  padding:10px 14px;border-radius:12px;font-size:14px;line-height:1.5;
+  word-break:break-word;
+}
+.msg.incoming .msg-bubble{background:var(--bg3);border-bottom-left-radius:3px}
+.msg.outgoing .msg-bubble{background:var(--orange);color:#fff;border-bottom-right-radius:3px}
+.msg-meta{font-size:11px;color:var(--text3);margin-top:3px;display:flex;align-items:center;gap:4px}
+.msg-status{font-size:13px}
+.chat-input-bar{
+  padding:12px 16px;border-top:1px solid var(--border);
+  display:flex;flex-direction:column;gap:8px;flex-shrink:0;
+}
+.quick-replies-bar{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.qr-chip{
+  background:var(--bg4);border:1px solid var(--border2);border-radius:20px;
+  padding:4px 10px;font-size:12px;color:var(--text2);cursor:pointer;
+  white-space:nowrap;transition:all .15s;
+}
+.qr-chip:hover{border-color:var(--orange);color:var(--orange)}
+.chat-input-row{display:flex;gap:8px;align-items:flex-end}
+.chat-textarea{
+  flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;
+  padding:10px 14px;color:var(--text);font-size:14px;resize:none;outline:none;
+  min-height:40px;max-height:120px;line-height:1.5;
+  transition:border-color .15s;
+}
+.chat-textarea:focus{border-color:var(--orange)}
+.btn-send{
+  width:40px;height:40px;border-radius:10px;border:none;
+  background:var(--orange);color:#fff;font-size:18px;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s;flex-shrink:0;
+}
+.btn-send:hover{background:var(--orange-dim)}
+.no-chat-selected{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;gap:8px;color:var(--text3);
+}
+.no-chat-selected .icon{font-size:48px;opacity:.3}
+.no-chat-selected p{font-size:14px}
+
+/* ─────────────── KANBAN ─────────────── */
+.kanban-board{display:flex;gap:16px;overflow-x:auto;padding-bottom:16px;min-height:calc(100vh - 160px)}
+.kanban-col{
+  min-width:260px;width:260px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  display:flex;flex-direction:column;max-height:calc(100vh - 160px);
+}
+.kanban-col-header{
+  padding:14px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.kanban-col-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
+.kanban-count{background:var(--bg4);color:var(--text2);font-size:11px;font-weight:700;padding:2px 7px;border-radius:12px}
+.kanban-col-dot{width:8px;height:8px;border-radius:50%}
+.kanban-cards{padding:10px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;min-height:60px}
+.kanban-cards.drag-over{background:var(--orange-glow);border-radius:8px}
+.kanban-card{
+  background:var(--bg3);border:1px solid var(--border2);border-radius:8px;
+  padding:12px;cursor:grab;transition:border-color .15s,box-shadow .15s;
+  user-select:none;
+}
+.kanban-card:hover{border-color:var(--border2);box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.kanban-card.dragging{opacity:.5;cursor:grabbing}
+.kanban-card-name{font-size:13px;font-weight:600;margin-bottom:4px}
+.kanban-card-phone{font-size:12px;color:var(--text2);margin-bottom:8px}
+.kanban-card-footer{display:flex;align-items:center;justify-content:space-between}
+.kanban-card-product{font-size:11px;color:var(--text2);background:var(--bg4);padding:2px 8px;border-radius:20px}
+.kanban-card-value{font-size:12px;font-weight:700;color:var(--green)}
+.kanban-add-btn{
+  width:100%;background:transparent;border:1px dashed var(--border2);
+  border-radius:8px;padding:8px;color:var(--text3);font-size:12px;
+  cursor:pointer;transition:all .15s;margin-top:4px;
+}
+.kanban-add-btn:hover{border-color:var(--orange);color:var(--orange)}
+
+/* ─────────────── CONTATOS ─────────────── */
+.contacts-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.contacts-search{flex:1;max-width:320px}
+.contacts-table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead th{
+  padding:11px 16px;text-align:left;font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.8px;color:var(--text3);
+  background:var(--bg3);border-bottom:1px solid var(--border);
+}
+tbody tr{border-bottom:1px solid var(--border);transition:background .12s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--bg3)}
+tbody td{padding:12px 16px;font-size:13px;color:var(--text2)}
+tbody td strong{color:var(--text);font-weight:600}
+.table-actions{display:flex;gap:6px}
+.table-action{
+  background:none;border:none;padding:4px 8px;border-radius:6px;
+  font-size:13px;cursor:pointer;transition:all .15s;color:var(--text3);
+}
+.table-action:hover{background:var(--bg4);color:var(--text)}
+.table-action.danger:hover{background:rgba(239,68,68,.1);color:var(--red)}
+
+/* ─────────────── RESPOSTAS RÁPIDAS ─────────────── */
+.rr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.rr-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px;position:relative;
+}
+.rr-card-atalho{
+  font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:1px;
+  color:var(--orange);margin-bottom:6px;
+}
+.rr-card-titulo{font-size:14px;font-weight:700;margin-bottom:6px}
+.rr-card-msg{font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:12px}
+.rr-card-footer{display:flex;gap:8px}
+
+/* ─────────────── FOLLOW-UP ─────────────── */
+.fu-list{display:flex;flex-direction:column;gap:16px}
+.fu-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.fu-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.fu-card-title{font-size:15px;font-weight:700}
+.fu-steps{display:flex;flex-direction:column;gap:10px}
+.fu-step{
+  display:flex;align-items:flex-start;gap:12px;
+  background:var(--bg3);border-radius:8px;padding:12px;
+}
+.fu-step-num{
+  width:28px;height:28px;border-radius:50%;background:var(--orange-glow);
+  color:var(--orange);font-size:12px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.fu-step-info{flex:1}
+.fu-step-delay{font-size:11px;color:var(--orange);font-weight:600;margin-bottom:2px}
+.fu-step-msg{font-size:13px;color:var(--text2);line-height:1.4}
+.fu-toggle{display:flex;align-items:center;gap:8px}
+.toggle{
+  width:40px;height:22px;border-radius:11px;background:var(--bg4);border:none;
+  position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;
+}
+.toggle::after{
+  content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;
+  border-radius:50%;background:#fff;transition:left .2s;
+}
+.toggle.on{background:var(--orange)}
+.toggle.on::after{left:21px}
+
+/* ─────────────── CONFIG ─────────────── */
+.config-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:16px}
+.config-section-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;margin-bottom:4px}
+.config-section-sub{font-size:13px;color:var(--text2);margin-bottom:20px}
+.qr-placeholder{
+  width:180px;height:180px;border:2px dashed var(--border2);border-radius:12px;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;
+  color:var(--text3);font-size:13px;
+}
+.qr-placeholder .icon{font-size:36px}
+.status-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.status-dot.green{background:var(--green);box-shadow:0 0 6px var(--green)}
+.status-dot.red{background:var(--red)}
+.status-dot.yellow{background:var(--yellow)}
+.users-list{display:flex;flex-direction:column;gap:10px}
+.user-row{
+  display:flex;align-items:center;gap:14px;padding:12px;
+  background:var(--bg3);border-radius:8px;
+}
+.user-row-avatar{
+  width:36px;height:36px;border-radius:50%;background:var(--orange);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:700;color:#fff;flex-shrink:0;
+}
+.user-row-info{flex:1}
+.user-row-name{font-size:14px;font-weight:600}
+.user-row-email{font-size:12px;color:var(--text2)}
+
+/* ─────────────── EMPTY STATE ─────────────── */
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:60px 20px;text-align:center;color:var(--text3);gap:8px;
+}
+.empty-state .icon{font-size:40px;opacity:.4;margin-bottom:4px}
+.empty-state h3{font-size:16px;font-weight:600;color:var(--text2)}
+.empty-state p{font-size:13px;max-width:280px;line-height:1.5}
+
+/* page visibility */
+.page{display:none}
+.page.active{display:block}
+#page-conversas.active{display:flex;flex-direction:column}
+
+/* loading skeleton */
+.skeleton{background:linear-gradient(90deg,var(--bg3) 25%,var(--bg4) 50%,var(--bg3) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════ LOGIN ══════════════════════ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">MM CRM</div>
+    <div class="login-sub">Painel de Atendimento — MM Suplementos</div>
+    <label class="login-label">E-mail</label>
+    <input class="login-input" type="email" id="login-email" placeholder="seu@email.com" autocomplete="email">
+    <label class="login-label">Senha</label>
+    <input class="login-input" type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+    <button class="login-btn" onclick="doLogin()">ENTRAR</button>
+    <div class="login-error" id="login-err"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ APP ══════════════════════ -->
+<div id="app">
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div class="sidebar-top">
+      <div class="brand">MM CRM <span>SUPLEMENTOS</span></div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Principal</div>
+      <button class="nav-item active" data-page="dashboard" onclick="goTo('dashboard',this)">
+        <span class="icon">📊</span> Dashboard
+      </button>
+      <button class="nav-item" data-page="conversas" onclick="goTo('conversas',this)">
+        <span class="icon">💬</span> Conversas
+        <span class="nav-badge" id="badge-conversas" style="display:none">0</span>
+      </button>
+      <button class="nav-item" data-page="kanban" onclick="goTo('kanban',this)">
+        <span class="icon">📋</span> Kanban
+      </button>
+      <div class="nav-label">Clientes</div>
+      <button class="nav-item" data-page="contatos" onclick="goTo('contatos',this)">
+        <span class="icon">👥</span> Contatos
+      </button>
+      <button class="nav-item" data-page="followup" onclick="goTo('followup',this)">
+        <span class="icon">📅</span> Follow-up
+      </button>
+      <div class="nav-label">Ferramentas</div>
+      <button class="nav-item" data-page="respostas" onclick="goTo('respostas',this)">
+        <span class="icon">⚡</span> Respostas Rápidas
+      </button>
+      <button class="nav-item" data-page="config" onclick="goTo('config',this)">
+        <span class="icon">⚙️</span> Configurações
+      </button>
+    </div>
+    <div class="sidebar-bottom">
+      <div class="user-pill">
+        <div class="user-avatar" id="sidebar-avatar">?</div>
+        <div>
+          <div class="user-name" id="sidebar-name">–</div>
+          <div class="user-role" id="sidebar-role">Atendente</div>
+        </div>
+        <button class="btn-logout" onclick="doLogout()" title="Sair">⎋</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">DASHBOARD</div>
+      <div class="topbar-actions" id="topbar-actions"></div>
+    </div>
+    <div class="content" id="content">
+
+      <!-- ── DASHBOARD ── -->
+      <div class="page active" id="page-dashboard">
+        <div class="grid4 mb16">
+          <div class="stat-card">
+            <div class="stat-label">Conversas hoje</div>
+            <div class="stat-value" id="stat-conv">–</div>
+            <div class="stat-change" id="stat-conv-change">carregando...</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Novos leads</div>
+            <div class="stat-value" id="stat-leads">–</div>
+            <div class="stat-change">no kanban</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Negócios fechados</div>
+            <div class="stat-value" id="stat-fechados">–</div>
+            <div class="stat-change">este mês</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Contatos</div>
+            <div class="stat-value" id="stat-contatos">–</div>
+            <div class="stat-change">na base</div>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="card">
+            <div style="font-weight:700;font-size:14px;margin-bottom:12px">⏰ Atividade recente</div>
+            <div class="activity-list" id="activity-list">
+              <div class="empty-state" style="padding:24px">
+                <div class="icon">📭</div>
+                <p>Nenhuma atividade ainda</p>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div style="font-weight:700;font-size:14px;margin-bottom:12px">📋 Funil de vendas</div>
+            <div id="dashboard-kanban-summary"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CONVERSAS ── -->
+      <div class="page" id="page-conversas" style="padding:0;flex:1;overflow:hidden">
+        <div class="chat-layout" style="height:100%">
+          <!-- conv list -->
+          <div class="conv-list">
+            <div class="conv-search">
+              <input type="text" placeholder="🔍 Buscar conversa..." oninput="filterConvs(this.value)">
+            </div>
+            <div class="conv-filter-tabs">
+              <button class="conv-tab active" onclick="setConvFilter('todos',this)">Todos</button>
+              <button class="conv-tab" onclick="setConvFilter('novo',this)">Novos</button>
+              <button class="conv-tab" onclick="setConvFilter('aguardando',this)">Aguardando</button>
+            </div>
+            <div class="conv-items" id="conv-items">
+              <div class="empty-state" style="padding:40px 20px">
+                <div class="icon">💬</div>
+                <p>Nenhuma conversa ainda</p>
+              </div>
+            </div>
+          </div>
+          <!-- chat panel -->
+          <div class="chat-panel" id="chat-panel">
+            <div class="no-chat-selected">
+              <div class="icon">💬</div>
+              <p>Selecione uma conversa</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── KANBAN ── -->
+      <div class="page" id="page-kanban">
+        <div class="section-header">
+          <div>
+            <div class="s-title">KANBAN</div>
+            <div class="s-sub">Gerencie seu funil de vendas</div>
+          </div>
+          <button class="btn btn-orange" onclick="openModalNovoLead()">+ Novo Lead</button>
+        </div>
+        <div class="kanban-board" id="kanban-board">
+          <!-- cols rendered by JS -->
+        </div>
+      </div>
+
+      <!-- ── CONTATOS ── -->
+      <div class="page" id="page-contatos">
+        <div class="section-header">
+          <div>
+            <div class="s-title">CONTATOS</div>
+            <div class="s-sub">Base de clientes</div>
+          </div>
+          <button class="btn btn-orange" onclick="openModalNovoContato()">+ Novo Contato</button>
+        </div>
+        <div class="contacts-toolbar">
+          <div class="contacts-search">
+            <input class="field" type="text" placeholder="🔍 Buscar por nome ou número..." oninput="filterContatos(this.value)">
+          </div>
+        </div>
+        <div class="contacts-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Número</th>
+                <th>Objetivo</th>
+                <th>Tags</th>
+                <th>Cadastro</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="contatos-tbody">
+              <tr><td colspan="6">
+                <div class="empty-state"><div class="icon">👥</div><p>Nenhum contato ainda</p></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── RESPOSTAS RÁPIDAS ── -->
+      <div class="page" id="page-respostas">
+        <div class="section-header">
+          <div>
+            <div class="s-title">RESPOSTAS RÁPIDAS</div>
+            <div class="s-sub">Atalhos para mensagens frequentes</div>
+          </div>
+          <button class="btn btn-orange" onclick="openModalNovaResposta()">+ Nova Resposta</button>
+        </div>
+        <div class="rr-grid" id="rr-grid">
+          <div class="empty-state" style="grid-column:1/-1">
+            <div class="icon">⚡</div>
+            <h3>Nenhuma resposta criada</h3>
+            <p>Crie atalhos para responder mais rápido</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── FOLLOW-UP ── -->
+      <div class="page" id="page-followup">
+        <div class="section-header">
+          <div>
+            <div class="s-title">FOLLOW-UP AUTOMÁTICO</div>
+            <div class="s-sub">Sequências de mensagens automáticas</div>
+          </div>
+          <button class="btn btn-orange" onclick="openModalNovaSequencia()">+ Nova Sequência</button>
+        </div>
+        <div class="fu-list" id="fu-list">
+          <div class="empty-state">
+            <div class="icon">📅</div>
+            <h3>Nenhuma sequência criada</h3>
+            <p>Crie sequências automáticas de follow-up</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CONFIG ── -->
+      <div class="page" id="page-config">
+        <div class="s-title">CONFIGURAÇÕES</div>
+        <div class="s-sub" style="margin-bottom:24px">Gerencie o sistema</div>
+
+        <div class="config-section">
+          <div class="config-section-title">📱 WhatsApp</div>
+          <div class="config-section-sub">Status da conexão com o Evolution API</div>
+          <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+            <div class="qr-placeholder" id="qr-area">
+              <div class="icon">📷</div>
+              <span>Aguardando QR</span>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                <span class="status-dot" id="wa-status-dot" style="background:var(--yellow)"></span>
+                <span style="font-size:13px;font-weight:600" id="wa-status-text">Verificando...</span>
+              </div>
+              <div style="font-size:12px;color:var(--text2);margin-bottom:12px" id="wa-instance-num">Número: –</div>
+              <button class="btn btn-ghost btn-sm" onclick="checkWAStatus()">🔄 Verificar Status</button>
+              <button class="btn btn-orange btn-sm" onclick="reconnectWA()" style="margin-left:8px">Reconectar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <div class="config-section-title">👥 Atendentes</div>
+          <div class="config-section-sub">Usuários com acesso ao CRM</div>
+          <div class="users-list" id="users-list">
+            <div class="empty-state" style="padding:20px"><p>Carregando...</p></div>
+          </div>
+          <button class="btn btn-ghost btn-sm mt16" onclick="openModalNovoUsuario()">+ Convidar Atendente</button>
+        </div>
+
+        <div class="config-section">
+          <div class="config-section-title">🔧 Backend</div>
+          <div class="config-section-sub">URL do servidor Railway</div>
+          <div class="field-row">
+            <label class="field-label">URL do Backend</label>
+            <input class="field" type="text" id="backend-url-input" placeholder="https://seu-backend.railway.app">
+          </div>
+          <button class="btn btn-orange btn-sm" onclick="saveBackendUrl()">Salvar URL</button>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ══════════════════════ MODAIS ══════════════════════ -->
+
+<!-- Modal Novo Contato -->
+<div class="modal-overlay" id="modal-contato">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-contato-title">NOVO CONTATO</div>
+      <button class="modal-close" onclick="closeModal('modal-contato')">✕</button>
+    </div>
+    <div class="field-row"><label class="field-label">Nome *</label><input class="field" id="c-nome" placeholder="João Silva"></div>
+    <div class="field-row"><label class="field-label">Número WhatsApp *</label><input class="field" id="c-numero" placeholder="5591999999999" type="tel"></div>
+    <div class="field-row"><label class="field-label">Objetivo</label>
+      <select class="field" id="c-objetivo">
+        <option value="">Selecionar...</option>
+        <option>Ganhar massa</option>
+        <option>Emagrecer</option>
+        <option>Definição</option>
+        <option>Saúde geral</option>
+        <option>Performance</option>
+      </select>
+    </div>
+    <div class="field-row"><label class="field-label">Observações</label><textarea class="field" id="c-obs" rows="3" placeholder="Notas sobre o cliente..."></textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-contato')">Cancelar</button>
+      <button class="btn btn-orange" onclick="salvarContato()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Novo Lead (Kanban) -->
+<div class="modal-overlay" id="modal-lead">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-lead-title">NOVO LEAD</div>
+      <button class="modal-close" onclick="closeModal('modal-lead')">✕</button>
+    </div>
+    <div class="field-row"><label class="field-label">Nome *</label><input class="field" id="l-nome" placeholder="João Silva"></div>
+    <div class="field-row"><label class="field-label">Número WhatsApp *</label><input class="field" id="l-numero" placeholder="5591999999999"></div>
+    <div class="field-row"><label class="field-label">Produto de interesse</label><input class="field" id="l-produto" placeholder="Whey, Creatina..."></div>
+    <div class="field-row"><label class="field-label">Valor estimado (R$)</label><input class="field" id="l-valor" type="number" placeholder="0"></div>
+    <div class="field-row"><label class="field-label">Etapa</label>
+      <select class="field" id="l-coluna">
+        <option value="novo">Novo Lead</option>
+        <option value="contato">Contato Realizado</option>
+        <option value="proposta">Proposta Enviada</option>
+        <option value="fechado">Negócio Fechado</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-lead')">Cancelar</button>
+      <button class="btn btn-orange" onclick="salvarLead()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Resposta Rápida -->
+<div class="modal-overlay" id="modal-resposta">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">RESPOSTA RÁPIDA</div>
+      <button class="modal-close" onclick="closeModal('modal-resposta')">✕</button>
+    </div>
+    <div class="field-row"><label class="field-label">Título</label><input class="field" id="rr-titulo" placeholder="Ex: Boas-vindas"></div>
+    <div class="field-row"><label class="field-label">Atalho</label><input class="field" id="rr-atalho" placeholder="Ex: /bv — digite / no chat para acionar"></div>
+    <div class="field-row"><label class="field-label">Mensagem *</label><textarea class="field" id="rr-msg" rows="5" placeholder="Olá [NOME], seja bem-vindo à MM Suplementos! 🍊"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-resposta')">Cancelar</button>
+      <button class="btn btn-orange" onclick="salvarResposta()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nova Sequência Follow-up -->
+<div class="modal-overlay" id="modal-seq">
+  <div class="modal" style="min-width:500px">
+    <div class="modal-header">
+      <div class="modal-title">NOVA SEQUÊNCIA</div>
+      <button class="modal-close" onclick="closeModal('modal-seq')">✕</button>
+    </div>
+    <div class="field-row"><label class="field-label">Nome da sequência *</label><input class="field" id="seq-nome" placeholder="Ex: Pós-venda 30 dias"></div>
+    <div id="seq-steps-area">
+      <div id="seq-steps"></div>
+      <button class="btn btn-ghost btn-sm mt8" onclick="addSeqStep()">+ Adicionar mensagem</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-seq')">Cancelar</button>
+      <button class="btn btn-orange" onclick="salvarSequencia()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Novo Usuário -->
+<div class="modal-overlay" id="modal-usuario">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">CONVIDAR ATENDENTE</div>
+      <button class="modal-close" onclick="closeModal('modal-usuario')">✕</button>
+    </div>
+    <div class="field-row"><label class="field-label">Nome *</label><input class="field" id="u-nome" placeholder="Maria Silva"></div>
+    <div class="field-row"><label class="field-label">E-mail *</label><input class="field" id="u-email" type="email" placeholder="maria@mm.com"></div>
+    <div class="field-row"><label class="field-label">Senha inicial *</label><input class="field" id="u-senha" type="text" placeholder="mm2025"></div>
+    <div class="field-row"><label class="field-label">Papel</label>
+      <select class="field" id="u-papel">
+        <option value="atendente">Atendente</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-usuario')">Cancelar</button>
+      <button class="btn btn-orange" onclick="criarUsuario()">Criar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ══════════════════════ SCRIPT ══════════════════════ -->
+<script>
+// ──────────────────────────────────────────────────────
+// CONFIGURAÇÃO — ATUALIZE COM SEUS DADOS
+// ──────────────────────────────────────────────────────
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyD-IjPBi05FtCnowpn0LKuxFool8Zpr13M",
+  authDomain:        "mm-suplementos-23cb9.firebaseapp.com",
+  projectId:         "mm-suplementos-23cb9",
+  storageBucket:     "mm-suplementos-23cb9.firebasestorage.app",
+  messagingSenderId: "571143844870",
+  appId:             "1:571143844870:web:f72fd99879ae00ec487f87"
+};
+
+// URL do backend Railway (atualize após deploy)
+let BACKEND_URL = localStorage.getItem('mm_backend_url') || "https://SEU-BACKEND.railway.app";
+
+// ──────────────────────────────────────────────────────
+// FIREBASE INIT
+// ──────────────────────────────────────────────────────
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// ──────────────────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────────────────
+let currentUser = null;
+let userProfile = null;
+let activeConvId = null;
+let convFilter = 'todos';
+let allConvs = [];
+let allContatos = [];
+let allRRs = [];
+let allLeads = [];
+let allFUs = [];
+let convListeners = {};
+let seqStepCount = 0;
+let editingContatoId = null;
+let editingLeadId = null;
+let editingRRId = null;
+
+// ──────────────────────────────────────────────────────
+// AUTH
+// ──────────────────────────────────────────────────────
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    currentUser = user;
+    // Load profile from Firestore
+    const snap = await db.collection('atendentes').doc(user.uid).get();
+    userProfile = snap.exists ? snap.data() : { nome: user.email.split('@')[0], papel: 'atendente' };
+    showApp();
+  } else {
+    currentUser = null;
+    showLogin();
+  }
+});
+
+function showLogin() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').classList.remove('visible');
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  const name = userProfile?.nome || currentUser.email;
+  document.getElementById('sidebar-name').textContent = name;
+  document.getElementById('sidebar-avatar').textContent = name.charAt(0).toUpperCase();
+  document.getElementById('sidebar-role').textContent = userProfile?.papel === 'admin' ? 'Admin' : 'Atendente';
+  document.getElementById('backend-url-input').value = BACKEND_URL;
+  loadAll();
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const err   = document.getElementById('login-err');
+  err.style.display = 'none';
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch(e) {
+    err.textContent = 'E-mail ou senha inválidos.';
+    err.style.display = 'block';
+  }
+}
+
+document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+function doLogout() {
+  auth.signOut();
+}
+
+// ──────────────────────────────────────────────────────
+// NAVIGATION
+// ──────────────────────────────────────────────────────
+function goTo(page, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  if(btn) btn.classList.add('active');
+  const titles = {dashboard:'DASHBOARD',conversas:'CONVERSAS',kanban:'KANBAN',contatos:'CONTATOS',respostas:'RESPOSTAS RÁPIDAS',followup:'FOLLOW-UP',config:'CONFIGURAÇÕES'};
+  document.getElementById('topbar-title').textContent = titles[page]||page.toUpperCase();
+  const actions = {
+    dashboard: '',
+    conversas: '',
+    kanban: '<button class="btn btn-orange btn-sm" onclick="openModalNovoLead()">+ Novo Lead</button>',
+    contatos: '<button class="btn btn-orange btn-sm" onclick="openModalNovoContato()">+ Novo Contato</button>',
+    respostas: '<button class="btn btn-orange btn-sm" onclick="openModalNovaResposta()">+ Nova Resposta</button>',
+    followup: '<button class="btn btn-orange btn-sm" onclick="openModalNovaSequencia()">+ Nova Sequência</button>',
+    config: ''
+  };
+  document.getElementById('topbar-actions').innerHTML = actions[page]||'';
+  if(page==='kanban') renderKanban();
+  if(page==='config') loadUsersConfig();
+}
+
+// ──────────────────────────────────────────────────────
+// LOAD ALL DATA
+// ──────────────────────────────────────────────────────
+function loadAll() {
+  listenConversas();
+  listenContatos();
+  listenRespostas();
+  listenLeads();
+  listenFollowUps();
+  checkWAStatus();
+}
+
+// ──────────────────────────────────────────────────────
+// CONVERSAS (real-time)
+// ──────────────────────────────────────────────────────
+function listenConversas() {
+  db.collection('conversas').orderBy('updatedAt','desc').onSnapshot(snap => {
+    allConvs = snap.docs.map(d => ({id:d.id,...d.data()}));
+    renderConvList();
+    updateDashboardStats();
+  });
+}
+
+function renderConvList() {
+  const filtered = allConvs.filter(c => {
+    if(convFilter === 'novo') return c.status === 'novo';
+    if(convFilter === 'aguardando') return c.status === 'aguardando';
+    return true;
+  });
+  const el = document.getElementById('conv-items');
+  const unread = filtered.filter(c => c.unread > 0).length;
+  const badge = document.getElementById('badge-conversas');
+  badge.style.display = unread > 0 ? 'flex' : 'none';
+  badge.textContent = unread;
+  if(!filtered.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:40px 20px"><div class="icon">💬</div><p>Nenhuma conversa</p></div>';
+    return;
+  }
+  el.innerHTML = filtered.map(c => {
+    const initials = (c.nome||c.numero||'?').charAt(0).toUpperCase();
+    const colors = ['#f05a0e','#3b82f6','#22c55e','#eab308','#8b5cf6'];
+    const color = colors[(c.numero||'').charCodeAt(3)%colors.length] || '#f05a0e';
+    const timeStr = c.updatedAt ? formatTime(c.updatedAt.toDate?.() || new Date(c.updatedAt)) : '';
+    return `<div class="conv-item ${activeConvId===c.id?'active':''}" onclick="openConv('${c.id}')">
+      <div class="conv-avatar" style="background:${color}">${initials}</div>
+      <div class="conv-info">
+        <div class="conv-name">
+          <span>${c.nome||c.numero||'Desconhecido'}</span>
+          <span class="conv-time">${timeStr}</span>
+        </div>
+        <div class="conv-preview">${c.lastMsg||'...'}</div>
+      </div>
+      ${c.unread>0?`<span class="conv-unread">${c.unread}</span>`:''}
+    </div>`;
+  }).join('');
+}
+
+function setConvFilter(f, btn) {
+  convFilter = f;
+  document.querySelectorAll('.conv-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderConvList();
+}
+
+function filterConvs(q) {
+  const lower = q.toLowerCase();
+  document.querySelectorAll('.conv-item').forEach(el => {
+    el.style.display = el.textContent.toLowerCase().includes(lower)?'flex':'none';
+  });
+}
+
+let msgListener = null;
+function openConv(id) {
+  activeConvId = id;
+  renderConvList();
+  const conv = allConvs.find(c=>c.id===id);
+  if(!conv) return;
+  // Mark as read
+  db.collection('conversas').doc(id).update({unread:0}).catch(()=>{});
+  // Build chat panel
+  const panel = document.getElementById('chat-panel');
+  const statusTag = {novo:'tag-yellow',ativo:'tag-green',aguardando:'tag-orange',fechado:'tag-gray'}[conv.status]||'tag-gray';
+  const statusLabel = {novo:'Novo',ativo:'Ativo',aguardando:'Aguardando',fechado:'Fechado'}[conv.status]||conv.status;
+  panel.innerHTML = `
+    <div class="chat-header">
+      <div class="conv-avatar" style="width:36px;height:36px;font-size:14px">${(conv.nome||conv.numero||'?').charAt(0).toUpperCase()}</div>
+      <div class="chat-contact-info">
+        <div class="chat-contact-name">${conv.nome||conv.numero||'Desconhecido'}</div>
+        <div class="chat-contact-status">${conv.numero} &nbsp;<span class="tag ${statusTag}">${statusLabel}</span></div>
+      </div>
+      <div class="chat-actions">
+        <button class="btn-icon" title="Abrir WhatsApp" onclick="openWhatsapp('${conv.numero}')">📱</button>
+        <button class="btn-icon" title="Adicionar ao Kanban" onclick="openModalNovoLeadFromConv('${conv.id}','${conv.nome||''}','${conv.numero||''}')">📋</button>
+        <button class="btn-icon" title="Fechar conversa" onclick="fecharConversa('${conv.id}')">✕</button>
+      </div>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+      <div class="empty-state"><div class="icon">⏳</div><p>Carregando mensagens...</p></div>
+    </div>
+    <div class="chat-input-bar">
+      <div class="quick-replies-bar" id="qr-bar"></div>
+      <div class="chat-input-row">
+        <textarea class="chat-textarea" id="msg-input" rows="1" placeholder="Digite uma mensagem..."
+          oninput="autoResizeTextarea(this);checkSlashCommand(this)"
+          onkeydown="handleMsgKeydown(event,'${id}','${conv.numero}')"></textarea>
+        <button class="btn-send" onclick="sendMsg('${id}','${conv.numero}')">➤</button>
+      </div>
+    </div>
+  `;
+  // Render quick replies bar
+  renderQRBar();
+  // Listen to messages
+  if(msgListener) msgListener();
+  msgListener = db.collection('mensagens').doc(id).collection('msgs')
+    .orderBy('createdAt','asc').onSnapshot(snap => {
+    const msgs = snap.docs.map(d => ({id:d.id,...d.data()}));
+    renderMessages(msgs);
+  });
+}
+
+function renderMessages(msgs) {
+  const el = document.getElementById('chat-messages');
+  if(!el) return;
+  if(!msgs.length) {
+    el.innerHTML = '<div class="chat-empty"><div class="icon">💬</div><p>Sem mensagens ainda</p></div>';
+    return;
+  }
+  el.innerHTML = msgs.map(m => {
+    const dir = m.de === 'cliente' ? 'incoming' : 'outgoing';
+    const time = m.createdAt ? formatTime(m.createdAt.toDate?.() || new Date(m.createdAt)) : '';
+    return `<div class="msg ${dir}">
+      <div class="msg-bubble">${escHtml(m.texto||'')}</div>
+      <div class="msg-meta">${time}${dir==='outgoing'?` <span class="msg-status">✓✓</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function renderQRBar() {
+  const bar = document.getElementById('qr-bar');
+  if(!bar) return;
+  bar.innerHTML = allRRs.slice(0,6).map(r =>
+    `<div class="qr-chip" onclick="useQR('${escHtml(r.mensagem)}')">${r.titulo}</div>`
+  ).join('');
+}
+
+function useQR(msg) {
+  const inp = document.getElementById('msg-input');
+  if(inp) { inp.value = msg; inp.focus(); }
+}
+
+async function sendMsg(convId, numero) {
+  const inp = document.getElementById('msg-input');
+  const texto = inp?.value?.trim();
+  if(!texto) return;
+  inp.value = '';
+  autoResizeTextarea(inp);
+  const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+  // Save to Firebase
+  await db.collection('mensagens').doc(convId).collection('msgs').add({
+    texto, de:'atendente', createdAt: timestamp,
+    atendente: userProfile?.nome || currentUser.email
+  });
+  await db.collection('conversas').doc(convId).update({
+    lastMsg: texto, updatedAt: timestamp, status:'ativo'
+  });
+  // Send via backend → Evolution API
+  fetch(`${BACKEND_URL}/send`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({numero, mensagem: texto})
+  }).catch(()=>{}); // silent fail — message already saved locally
+}
+
+function handleMsgKeydown(e, convId, numero) {
+  if(e.key==='Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMsg(convId, numero);
+  }
+}
+
+function autoResizeTextarea(el) {
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,120)+'px';
+}
+
+function checkSlashCommand(el) {
+  // Quick reply slash command
+  if(el.value.startsWith('/')) {
+    const q = el.value.slice(1).toLowerCase();
+    const match = allRRs.find(r => r.atalho && r.atalho.replace('/','').toLowerCase().startsWith(q));
+    if(match && q.length>0) { el.value = match.mensagem; }
+  }
+}
+
+function openWhatsapp(numero) {
+  window.open(`https://wa.me/${numero}`, '_blank');
+}
+
+function openModalNovoLeadFromConv(id, nome, numero) {
+  document.getElementById('l-nome').value = nome;
+  document.getElementById('l-numero').value = numero;
+  openModal('modal-lead');
+}
+
+function fecharConversa(id) {
+  db.collection('conversas').doc(id).update({status:'fechado'});
+  toast('Conversa fechada');
+}
+
+// ──────────────────────────────────────────────────────
+// CONTATOS
+// ──────────────────────────────────────────────────────
+function listenContatos() {
+  db.collection('contatos').orderBy('nome','asc').onSnapshot(snap => {
+    allContatos = snap.docs.map(d => ({id:d.id,...d.data()}));
+    renderContatos();
+    updateDashboardStats();
+  });
+}
+
+function renderContatos(list) {
+  const data = list || allContatos;
+  const tbody = document.getElementById('contatos-tbody');
+  if(!data.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="icon">👥</div><p>Nenhum contato ainda</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(c => {
+    const date = c.createdAt ? new Date(c.createdAt.toDate?.() || c.createdAt).toLocaleDateString('pt-BR') : '–';
+    return `<tr>
+      <td><strong>${escHtml(c.nome||'–')}</strong></td>
+      <td>${escHtml(c.numero||'–')}</td>
+      <td>${c.objetivo ? `<span class="tag tag-blue">${escHtml(c.objetivo)}</span>` : '–'}</td>
+      <td>${c.tags ? c.tags.map(t=>`<span class="tag tag-gray">${escHtml(t)}</span>`).join(' ') : '–'}</td>
+      <td>${date}</td>
+      <td>
+        <div class="table-actions">
+          <button class="table-action" onclick="openWhatsapp('${c.numero}')" title="WhatsApp">📱</button>
+          <button class="table-action" onclick="editContato('${c.id}')" title="Editar">✏️</button>
+          <button class="table-action danger" onclick="deleteContato('${c.id}')" title="Excluir">🗑️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterContatos(q) {
+  const lower = q.toLowerCase();
+  renderContatos(allContatos.filter(c =>
+    (c.nome||'').toLowerCase().includes(lower) || (c.numero||'').includes(lower)
+  ));
+}
+
+function openModalNovoContato() {
+  editingContatoId = null;
+  document.getElementById('modal-contato-title').textContent = 'NOVO CONTATO';
+  ['c-nome','c-numero','c-obs'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('c-objetivo').value='';
+  openModal('modal-contato');
+}
+
+function editContato(id) {
+  const c = allContatos.find(x=>x.id===id);
+  if(!c) return;
+  editingContatoId = id;
+  document.getElementById('modal-contato-title').textContent = 'EDITAR CONTATO';
+  document.getElementById('c-nome').value = c.nome||'';
+  document.getElementById('c-numero').value = c.numero||'';
+  document.getElementById('c-objetivo').value = c.objetivo||'';
+  document.getElementById('c-obs').value = c.obs||'';
+  openModal('modal-contato');
+}
+
+async function salvarContato() {
+  const nome = document.getElementById('c-nome').value.trim();
+  const numero = document.getElementById('c-numero').value.trim().replace(/\D/g,'');
+  if(!nome||!numero) { toast('Preencha nome e número','error'); return; }
+  const data = {
+    nome, numero,
+    objetivo: document.getElementById('c-objetivo').value,
+    obs: document.getElementById('c-obs').value.trim(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if(editingContatoId) {
+    await db.collection('contatos').doc(editingContatoId).update(data);
+    toast('Contato atualizado','success');
+  } else {
+    data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    await db.collection('contatos').add(data);
+    toast('Contato salvo','success');
+  }
+  closeModal('modal-contato');
+}
+
+function deleteContato(id) {
+  if(!confirm('Excluir este contato?')) return;
+  db.collection('contatos').doc(id).delete();
+  toast('Contato excluído');
+}
+
+// ──────────────────────────────────────────────────────
+// KANBAN
+// ──────────────────────────────────────────────────────
+const COLUMNS = [
+  {id:'novo',    label:'Novo Lead',         color:'#3b82f6'},
+  {id:'contato', label:'Contato Realizado', color:'#eab308'},
+  {id:'proposta',label:'Proposta Enviada',  color:'#f05a0e'},
+  {id:'fechado', label:'Negócio Fechado',   color:'#22c55e'},
+];
+
+function listenLeads() {
+  db.collection('kanban').onSnapshot(snap => {
+    allLeads = snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(document.getElementById('page-kanban').classList.contains('active')) renderKanban();
+    updateDashboardStats();
+  });
+}
+
+function renderKanban() {
+  const board = document.getElementById('kanban-board');
+  board.innerHTML = COLUMNS.map(col => {
+    const cards = allLeads.filter(l=>l.coluna===col.id);
+    const cardsHtml = cards.map(c => `
+      <div class="kanban-card" draggable="true"
+        ondragstart="dragStart(event,'${c.id}')"
+        ondragend="dragEnd(event)">
+        <div class="kanban-card-name">${escHtml(c.nome||'–')}</div>
+        <div class="kanban-card-phone">${escHtml(c.numero||'')}</div>
+        <div class="kanban-card-footer">
+          <span class="kanban-card-product">${escHtml(c.produto||'–')}</span>
+          ${c.valor?`<span class="kanban-card-value">R$ ${Number(c.valor).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>`:''}
+        </div>
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px" onclick="editLead('${c.id}')">Editar</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:var(--red)" onclick="deleteLead('${c.id}')">Remover</button>
+        </div>
+      </div>
+    `).join('');
+    return `<div class="kanban-col">
+      <div class="kanban-col-header">
+        <div class="kanban-col-title">
+          <div class="kanban-col-dot" style="background:${col.color}"></div>
+          ${col.label}
+        </div>
+        <span class="kanban-count">${cards.length}</span>
+      </div>
+      <div class="kanban-cards" id="col-${col.id}"
+        ondragover="dragOver(event)"
+        ondragleave="dragLeave(event)"
+        ondrop="drop(event,'${col.id}')">
+        ${cardsHtml}
+        <button class="kanban-add-btn" onclick="openModalNovoLeadCol('${col.id}')">+ Adicionar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let draggingId = null;
+function dragStart(e,id){draggingId=id;e.currentTarget.classList.add('dragging')}
+function dragEnd(e){e.currentTarget.classList.remove('dragging')}
+function dragOver(e){e.preventDefault();e.currentTarget.classList.add('drag-over')}
+function dragLeave(e){e.currentTarget.classList.remove('drag-over')}
+function drop(e,colId){
+  e.preventDefault();e.currentTarget.classList.remove('drag-over');
+  if(draggingId) {
+    db.collection('kanban').doc(draggingId).update({coluna:colId});
+    draggingId=null;
+  }
+}
+
+function openModalNovoLead() {
+  editingLeadId = null;
+  document.getElementById('modal-lead-title').textContent = 'NOVO LEAD';
+  ['l-nome','l-numero','l-produto','l-valor'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('l-coluna').value='novo';
+  openModal('modal-lead');
+}
+
+function openModalNovoLeadCol(colId) {
+  openModalNovoLead();
+  document.getElementById('l-coluna').value = colId;
+}
+
+function editLead(id) {
+  const l = allLeads.find(x=>x.id===id);
+  if(!l) return;
+  editingLeadId = id;
+  document.getElementById('modal-lead-title').textContent = 'EDITAR LEAD';
+  document.getElementById('l-nome').value = l.nome||'';
+  document.getElementById('l-numero').value = l.numero||'';
+  document.getElementById('l-produto').value = l.produto||'';
+  document.getElementById('l-valor').value = l.valor||'';
+  document.getElementById('l-coluna').value = l.coluna||'novo';
+  openModal('modal-lead');
+}
+
+async function salvarLead() {
+  const nome = document.getElementById('l-nome').value.trim();
+  const numero = document.getElementById('l-numero').value.trim().replace(/\D/g,'');
+  if(!nome) { toast('Nome obrigatório','error'); return; }
+  const data = {
+    nome, numero,
+    produto: document.getElementById('l-produto').value.trim(),
+    valor: document.getElementById('l-valor').value||0,
+    coluna: document.getElementById('l-coluna').value,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if(editingLeadId) {
+    await db.collection('kanban').doc(editingLeadId).update(data);
+    toast('Lead atualizado','success');
+  } else {
+    data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    await db.collection('kanban').add(data);
+    toast('Lead criado','success');
+  }
+  closeModal('modal-lead');
+  renderKanban();
+}
+
+function deleteLead(id) {
+  if(!confirm('Remover este lead?')) return;
+  db.collection('kanban').doc(id).delete();
+}
+
+// ──────────────────────────────────────────────────────
+// RESPOSTAS RÁPIDAS
+// ──────────────────────────────────────────────────────
+function listenRespostas() {
+  db.collection('respostas_rapidas').onSnapshot(snap => {
+    allRRs = snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderRespostas();
+  });
+}
+
+function renderRespostas() {
+  const grid = document.getElementById('rr-grid');
+  if(!allRRs.length) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="icon">⚡</div><h3>Nenhuma resposta criada</h3><p>Crie atalhos para responder mais rápido</p></div>';
+    return;
+  }
+  grid.innerHTML = allRRs.map(r => `
+    <div class="rr-card">
+      ${r.atalho?`<div class="rr-card-atalho">${escHtml(r.atalho)}</div>`:''}
+      <div class="rr-card-titulo">${escHtml(r.titulo||'–')}</div>
+      <div class="rr-card-msg">${escHtml(r.mensagem||'')}</div>
+      <div class="rr-card-footer">
+        <button class="btn btn-ghost btn-sm" onclick="editRR('${r.id}')">Editar</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteRR('${r.id}')">Excluir</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openModalNovaResposta() {
+  editingRRId = null;
+  ['rr-titulo','rr-atalho','rr-msg'].forEach(id=>document.getElementById(id).value='');
+  openModal('modal-resposta');
+}
+
+function editRR(id) {
+  const r = allRRs.find(x=>x.id===id);
+  if(!r) return;
+  editingRRId = id;
+  document.getElementById('rr-titulo').value = r.titulo||'';
+  document.getElementById('rr-atalho').value = r.atalho||'';
+  document.getElementById('rr-msg').value = r.mensagem||'';
+  openModal('modal-resposta');
+}
+
+async function salvarResposta() {
+  const titulo = document.getElementById('rr-titulo').value.trim();
+  const mensagem = document.getElementById('rr-msg').value.trim();
+  if(!mensagem) { toast('Mensagem obrigatória','error'); return; }
+  const data = { titulo, mensagem, atalho: document.getElementById('rr-atalho').value.trim() };
+  if(editingRRId) {
+    await db.collection('respostas_rapidas').doc(editingRRId).update(data);
+    toast('Resposta atualizada','success');
+  } else {
+    await db.collection('respostas_rapidas').add(data);
+    toast('Resposta criada','success');
+  }
+  closeModal('modal-resposta');
+}
+
+function deleteRR(id) {
+  if(!confirm('Excluir esta resposta?')) return;
+  db.collection('respostas_rapidas').doc(id).delete();
+}
+
+// ──────────────────────────────────────────────────────
+// FOLLOW-UP SEQUENCES
+// ──────────────────────────────────────────────────────
+function listenFollowUps() {
+  db.collection('followup_sequencias').onSnapshot(snap => {
+    allFUs = snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderFollowUps();
+  });
+}
+
+function renderFollowUps() {
+  const list = document.getElementById('fu-list');
+  if(!allFUs.length) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">📅</div><h3>Nenhuma sequência criada</h3><p>Crie sequências automáticas de follow-up</p></div>';
+    return;
+  }
+  list.innerHTML = allFUs.map(fu => `
+    <div class="fu-card">
+      <div class="fu-card-header">
+        <div class="fu-card-title">${escHtml(fu.nome||'Sequência')}</div>
+        <div class="fu-toggle">
+          <span style="font-size:12px;color:var(--text2)">${fu.ativo?'Ativa':'Pausada'}</span>
+          <button class="toggle ${fu.ativo?'on':''}" onclick="toggleFU('${fu.id}',${!fu.ativo})"></button>
+          <button class="btn btn-ghost btn-sm" onclick="deleteFU('${fu.id}')">🗑️</button>
+        </div>
+      </div>
+      <div class="fu-steps">
+        ${(fu.steps||[]).map((s,i) => `
+          <div class="fu-step">
+            <div class="fu-step-num">${i+1}</div>
+            <div class="fu-step-info">
+              <div class="fu-step-delay">${s.delay||'Imediato'}</div>
+              <div class="fu-step-msg">${escHtml(s.mensagem||'')}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function openModalNovaSequencia() {
+  document.getElementById('seq-nome').value='';
+  seqStepCount=0;
+  document.getElementById('seq-steps').innerHTML='';
+  addSeqStep();
+  openModal('modal-seq');
+}
+
+function addSeqStep() {
+  seqStepCount++;
+  const div = document.createElement('div');
+  div.className='fu-step mt8';
+  div.id=`seq-step-${seqStepCount}`;
+  div.innerHTML=`
+    <div class="fu-step-num">${seqStepCount}</div>
+    <div class="fu-step-info" style="width:100%">
+      <div class="field-row mb8">
+        <label class="field-label" style="font-size:11px">Enviar após</label>
+        <select class="field" id="step-delay-${seqStepCount}" style="font-size:13px">
+          <option value="Imediato">Imediato</option>
+          <option value="1 hora">1 hora</option>
+          <option value="3 horas">3 horas</option>
+          <option value="1 dia">1 dia</option>
+          <option value="3 dias">3 dias</option>
+          <option value="7 dias">7 dias</option>
+          <option value="15 dias">15 dias</option>
+          <option value="30 dias">30 dias</option>
+        </select>
+      </div>
+      <textarea class="field" id="step-msg-${seqStepCount}" rows="2" placeholder="Mensagem ${seqStepCount}..."></textarea>
+    </div>
+  `;
+  document.getElementById('seq-steps').appendChild(div);
+}
+
+async function salvarSequencia() {
+  const nome = document.getElementById('seq-nome').value.trim();
+  if(!nome) { toast('Nome obrigatório','error'); return; }
+  const steps = [];
+  for(let i=1;i<=seqStepCount;i++) {
+    const msg = document.getElementById(`step-msg-${i}`)?.value?.trim();
+    const delay = document.getElementById(`step-delay-${i}`)?.value;
+    if(msg) steps.push({mensagem:msg,delay});
+  }
+  if(!steps.length) { toast('Adicione ao menos uma mensagem','error'); return; }
+  await db.collection('followup_sequencias').add({nome,steps,ativo:true,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  toast('Sequência criada','success');
+  closeModal('modal-seq');
+}
+
+function toggleFU(id, val) {
+  db.collection('followup_sequencias').doc(id).update({ativo:val});
+}
+
+function deleteFU(id) {
+  if(!confirm('Excluir esta sequência?')) return;
+  db.collection('followup_sequencias').doc(id).delete();
+}
+
+// ──────────────────────────────────────────────────────
+// DASHBOARD STATS
+// ──────────────────────────────────────────────────────
+function updateDashboardStats() {
+  // Conversas hoje
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const convHoje = allConvs.filter(c => {
+    const d = c.updatedAt?.toDate?.();
+    return d && d >= today;
+  }).length;
+  document.getElementById('stat-conv').textContent = convHoje;
+  // Leads
+  document.getElementById('stat-leads').textContent = allLeads.filter(l=>l.coluna==='novo').length;
+  // Fechados este mês
+  const mes = new Date(); mes.setDate(1); mes.setHours(0,0,0,0);
+  document.getElementById('stat-fechados').textContent = allLeads.filter(l=>l.coluna==='fechado'&&l.updatedAt?.toDate?.()>=mes).length;
+  // Contatos
+  document.getElementById('stat-contatos').textContent = allContatos.length;
+  // Kanban summary
+  const kSummary = document.getElementById('dashboard-kanban-summary');
+  if(kSummary) {
+    kSummary.innerHTML = COLUMNS.map(col => {
+      const count = allLeads.filter(l=>l.coluna===col.id).length;
+      const pct = allLeads.length ? Math.round(count/allLeads.length*100) : 0;
+      return `<div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+          <span style="display:flex;align-items:center;gap:8px">
+            <span style="width:8px;height:8px;border-radius:50%;background:${col.color};display:inline-block"></span>
+            ${col.label}
+          </span>
+          <span style="font-weight:700">${count}</span>
+        </div>
+        <div style="background:var(--bg4);border-radius:4px;height:6px;overflow:hidden">
+          <div style="background:${col.color};height:100%;width:${pct}%;border-radius:4px;transition:width .3s"></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  // Activity
+  const activity = document.getElementById('activity-list');
+  if(activity) {
+    const recent = [...allConvs].slice(0,5);
+    if(!recent.length) {
+      activity.innerHTML = '<div class="empty-state" style="padding:24px"><div class="icon">📭</div><p>Nenhuma atividade ainda</p></div>';
+    } else {
+      activity.innerHTML = recent.map(c => {
+        const time = c.updatedAt ? formatTime(c.updatedAt.toDate?.() || new Date(c.updatedAt)) : '';
+        return `<div class="activity-item">
+          <div class="activity-dot" style="background:var(--orange)"></div>
+          <div>
+            <div class="activity-text">Nova mensagem de <strong>${escHtml(c.nome||c.numero||'–')}</strong></div>
+            <div class="activity-time">${time}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
+// ──────────────────────────────────────────────────────
+// CONFIG — WhatsApp Status
+// ──────────────────────────────────────────────────────
+async function checkWAStatus() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/status`, {signal: AbortSignal.timeout(5000)});
+    const data = await res.json();
+    const dot = document.getElementById('wa-status-dot');
+    const txt = document.getElementById('wa-status-text');
+    const num = document.getElementById('wa-instance-num');
+    if(!dot) return;
+    if(data.status === 'open') {
+      dot.style.background='var(--green)';dot.style.boxShadow='0 0 6px var(--green)';
+      txt.textContent='Conectado ✓';
+      if(data.number) num.textContent='Número: +'+data.number;
+    } else if(data.status === 'connecting') {
+      dot.style.background='var(--yellow)';dot.style.boxShadow='';
+      txt.textContent='Conectando...';
+    } else {
+      dot.style.background='var(--red)';dot.style.boxShadow='';
+      txt.textContent='Desconectado';
+    }
+    if(data.qrcode) {
+      document.getElementById('qr-area').innerHTML=`<img src="${data.qrcode}" style="width:170px;height:170px;border-radius:8px">`;
+    }
+  } catch(e) {
+    const dot = document.getElementById('wa-status-dot');
+    const txt = document.getElementById('wa-status-text');
+    if(dot) { dot.style.background='var(--red)'; txt.textContent='Backend offline'; }
+  }
+}
+
+async function reconnectWA() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/reconnect`,{method:'POST'});
+    toast('Solicitação enviada. Aguarde o QR code.','success');
+    setTimeout(checkWAStatus, 3000);
+  } catch(e){ toast('Erro ao reconectar','error'); }
+}
+
+function saveBackendUrl() {
+  const val = document.getElementById('backend-url-input').value.trim();
+  if(!val) return;
+  BACKEND_URL = val;
+  localStorage.setItem('mm_backend_url', val);
+  toast('URL salva!','success');
+}
+
+// ──────────────────────────────────────────────────────
+// CONFIG — Users
+// ──────────────────────────────────────────────────────
+async function loadUsersConfig() {
+  const snap = await db.collection('atendentes').get();
+  const users = snap.docs.map(d=>({id:d.id,...d.data()}));
+  const list = document.getElementById('users-list');
+  if(!list) return;
+  if(!users.length) { list.innerHTML='<div class="empty-state" style="padding:20px"><p>Nenhum atendente cadastrado</p></div>'; return; }
+  list.innerHTML = users.map(u => `
+    <div class="user-row">
+      <div class="user-row-avatar">${(u.nome||'?').charAt(0).toUpperCase()}</div>
+      <div class="user-row-info">
+        <div class="user-row-name">${escHtml(u.nome||'–')}</div>
+        <div class="user-row-email">${escHtml(u.email||'')}</div>
+      </div>
+      <span class="tag ${u.papel==='admin'?'tag-orange':'tag-blue'}">${u.papel||'atendente'}</span>
+    </div>
+  `).join('');
+}
+
+function openModalNovoUsuario() { openModal('modal-usuario'); }
+
+async function criarUsuario() {
+  const nome = document.getElementById('u-nome').value.trim();
+  const email = document.getElementById('u-email').value.trim();
+  const senha = document.getElementById('u-senha').value.trim();
+  const papel = document.getElementById('u-papel').value;
+  if(!nome||!email||!senha) { toast('Preencha todos os campos','error'); return; }
+  try {
+    // Create in Auth via backend (can't create other users from client SDK without Admin SDK)
+    const res = await fetch(`${BACKEND_URL}/criar-usuario`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({nome,email,senha,papel})
+    });
+    const data = await res.json();
+    if(data.uid) {
+      await db.collection('atendentes').doc(data.uid).set({nome,email,papel,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+      toast('Atendente criado!','success');
+      closeModal('modal-usuario');
+      loadUsersConfig();
+    } else { toast(data.error||'Erro ao criar','error'); }
+  } catch(e) { toast('Erro: backend offline','error'); }
+}
+
+// ──────────────────────────────────────────────────────
+// MODAL HELPERS
+// ──────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.classList.remove('open'); });
+});
+
+// ──────────────────────────────────────────────────────
+// UTILS
+// ──────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatTime(date) {
+  if(!date) return '';
+  const now = new Date();
+  const d = new Date(date);
+  const diff = now - d;
+  if(diff < 60000) return 'agora';
+  if(diff < 3600000) return Math.floor(diff/60000)+'min';
+  if(diff < 86400000) return d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+}
+
+let toastTimer;
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className='', 3000);
+}
+
+// Init config input
+document.getElementById('backend-url-input').value = BACKEND_URL;
+</script>
+</body>
+</html>
