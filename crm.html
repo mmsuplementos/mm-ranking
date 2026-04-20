@@ -786,6 +786,10 @@ const FIREBASE_CONFIG = {
   appId:             "1:571143844870:web:f72fd99879ae00ec487f87"
 };
 let BACKEND_URL = localStorage.getItem('mm_backend_url') || "https://mm-crm-backend-production.up.railway.app";
+// Evolution API direta (para status/QR/envio de mensagens)
+const EVO_URL = "https://evolution-api-production-ba88.up.railway.app";
+const EVO_KEY = "mmsuplementos2025key";
+const EVO_INSTANCE = "mm-suplementos";
 
 // ─── FIREBASE ─────────────────────────────────────────────────────────────────
 firebase.initializeApp(FIREBASE_CONFIG);
@@ -1075,7 +1079,7 @@ async function sendMsg(convId,numero){
   const ts=firebase.firestore.FieldValue.serverTimestamp();
   await db.collection('mensagens').doc(convId).collection('msgs').add({texto,de:'atendente',createdAt:ts,atendente:UP?.nome||CU.email});
   await db.collection('conversas').doc(convId).update({lastMsg:texto,updatedAt:ts,status:'ativo'});
-  fetch(`${BACKEND_URL}/send`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({numero,mensagem:texto})}).catch(()=>{});
+  fetch(`${EVO_URL}/message/sendText/${EVO_INSTANCE}`,{method:'POST',headers:{'Content-Type':'application/json','apikey':EVO_KEY},body:JSON.stringify({number:numero,textMessage:{text:texto}})}).catch(()=>{});
 }
 function handleMsgKey(e,cid,num){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg(cid,num);}}
 function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,110)+'px';}
@@ -1329,7 +1333,7 @@ function deleteAgend(id){if(!confirm('Excluir agendamento?'))return;db.collectio
 function checkAgendamentos(){
   const now=new Date();
   allAgends.filter(a=>!a.enviado&&a.dataHora?.toDate&&a.dataHora.toDate()<=now).forEach(async a=>{
-    await fetch(`${BACKEND_URL}/send`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({numero:a.numero,mensagem:a.mensagem})}).catch(()=>{});
+    await fetch(`${EVO_URL}/message/sendText/${EVO_INSTANCE}`,{method:'POST',headers:{'Content-Type':'application/json','apikey':EVO_KEY},body:JSON.stringify({number:a.numero,textMessage:{text:a.mensagem}})}).catch(()=>{});
     await db.collection('agendamentos').doc(a.id).update({enviado:true});
   });
 }
@@ -1386,7 +1390,7 @@ async function dispararCampanha(id){
   let enviados=0;
   for(const numero of(camp.contatos||[])){
     const msg=camp.mensagem.replace(/\[NOME\]/g,allContatos.find(c=>c.numero===numero)?.nome||'');
-    await fetch(`${BACKEND_URL}/send`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({numero,mensagem:msg})}).catch(()=>{});
+    await fetch(`${EVO_URL}/message/sendText/${EVO_INSTANCE}`,{method:'POST',headers:{'Content-Type':'application/json','apikey':EVO_KEY},body:JSON.stringify({number:numero,textMessage:{text:msg}})}).catch(()=>{});
     enviados++;
     await db.collection('campanhas').doc(id).update({enviados});
     await new Promise(r=>setTimeout(r,(camp.intervalo||3)*1000));
@@ -1502,10 +1506,56 @@ function updateDash(){
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 async function checkWA(){
-  try{const r=await fetch(`${BACKEND_URL}/status`,{signal:AbortSignal.timeout(5000)});const d=await r.json();const dot=document.getElementById('wa-dot'),txt=document.getElementById('wa-txt'),num=document.getElementById('wa-num');if(!dot)return;if(d.status==='open'){dot.className='status-dot green';txt.textContent='Conectado ✓';if(d.number)num.textContent='Número: +'+d.number;}else if(d.status==='connecting'){dot.className='status-dot yellow';txt.textContent='Conectando...';}else{dot.className='status-dot red';txt.textContent='Desconectado';}if(d.qrcode)document.getElementById('qr-area').innerHTML=`<img src="${d.qrcode}" style="width:160px;height:160px;border-radius:8px">`;}
-  catch(e){const dot=document.getElementById('wa-dot'),txt=document.getElementById('wa-txt');if(dot){dot.className='status-dot red';txt.textContent='Backend offline';}}
+  const dot=document.getElementById('wa-dot'),txt=document.getElementById('wa-txt'),num=document.getElementById('wa-num');
+  if(!dot) return;
+  try {
+    // Tenta criar instância primeiro (idempotente)
+    await fetch(`${EVO_URL}/instance/create`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':EVO_KEY},
+      body:JSON.stringify({instanceName:EVO_INSTANCE,qrcode:true,integration:'WHATSAPP-BAILEYS'})
+    }).catch(()=>{});
+
+    const r = await fetch(`${EVO_URL}/instance/connectionState/${EVO_INSTANCE}`, {
+      headers:{'apikey':EVO_KEY}, signal:AbortSignal.timeout(8000)
+    });
+    const d = await r.json();
+    const state = d?.instance?.state || d?.state || 'unknown';
+
+    if(state==='open'){
+      dot.className='status-dot green';
+      txt.textContent='Conectado ✓';
+      const prof = d?.instance?.profileName || d?.profileName;
+      if(prof) num.textContent='Número: '+prof;
+    } else {
+      dot.className='status-dot yellow';
+      txt.textContent='Aguardando QR Code...';
+      // Busca QR code
+      try {
+        const qr = await fetch(`${EVO_URL}/instance/connect/${EVO_INSTANCE}`,{headers:{'apikey':EVO_KEY},signal:AbortSignal.timeout(8000)});
+        const qd = await qr.json();
+        const b64 = qd?.base64 || qd?.qrcode?.base64;
+        if(b64){
+          const src = b64.startsWith('data:') ? b64 : 'data:image/png;base64,'+b64;
+          document.getElementById('qr-area').innerHTML=`<img src="${src}" style="width:160px;height:160px;border-radius:8px">`;
+        }
+      } catch(_){}
+    }
+  } catch(e){
+    dot.className='status-dot red';
+    txt.textContent='Evolution API offline';
+    console.warn('[checkWA]',e.message);
+  }
 }
-async function reconnectWA(){try{await fetch(`${BACKEND_URL}/reconnect`,{method:'POST'});toast('Aguarde o QR code...','success');setTimeout(checkWA,3000);}catch(e){toast('Erro ao reconectar','error');}}
+async function reconnectWA(){
+  try{
+    await fetch(`${EVO_URL}/instance/logout/${EVO_INSTANCE}`,{method:'DELETE',headers:{'apikey':EVO_KEY}}).catch(()=>{});
+    await new Promise(r=>setTimeout(r,1500));
+    toast('Aguarde o QR code...','success');
+    document.getElementById('qr-area').innerHTML='<div style="font-size:30px;opacity:.4">📷</div><span>Gerando QR...</span>';
+    setTimeout(checkWA,2000);
+  }catch(e){toast('Erro ao reconectar','error');}
+}
 function saveBackendUrl(){const v=document.getElementById('backend-url-inp').value.trim();if(!v)return;BACKEND_URL=v;localStorage.setItem('mm_backend_url',v);toast('URL salva!','success');}
 async function loadUsersConfig(){
   const snap=await db.collection('atendentes').get();const users=snap.docs.map(d=>({id:d.id,...d.data()}));
