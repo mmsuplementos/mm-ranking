@@ -1512,18 +1512,20 @@ function updateDash(){
 
 async function checkWA(){
   try {
-    const res = await fetch(`${BACKEND_URL}/wa-status`);
+    const res = await fetch(`${BACKEND_URL}/wa-status`, {signal: AbortSignal.timeout(8000)});
     const d = await res.json();
-    console.log('WA API:', d);
+    console.log('[WA]', d);
+
     const dot = document.getElementById('wa-dot');
     const txt = document.getElementById('wa-txt');
     const num = document.getElementById('wa-num');
+
     if(d.status === 'open'){
       if(dot) dot.className='status-dot green';
-      if(txt) txt.textContent='Conectado';
-      if(num) num.textContent='';
+      if(txt) txt.textContent='Conectado ✓';
+      if(num && d.number) num.textContent='Número: '+d.number;
       const qrArea = document.getElementById('qr-area');
-      if(qrArea) qrArea.innerHTML = '';
+      if(qrArea) qrArea.innerHTML='<div style="font-size:30px">✅</div><span style="font-size:11px;color:var(--green)">WhatsApp Conectado</span>';
     } else if(d.status === 'qrcode' && d.qrcode){
       if(dot) dot.className='status-dot yellow';
       if(txt) txt.textContent='Escaneie o QR Code';
@@ -1531,14 +1533,14 @@ async function checkWA(){
       renderQR(d.qrcode);
     } else {
       if(dot) dot.className='status-dot yellow';
-      if(txt) txt.textContent='Aguardando QR...';
+      if(txt) txt.textContent='Aguardando...';
     }
   } catch(e){
-    console.error(e);
+    console.error('[WA error]', e);
     const dot = document.getElementById('wa-dot');
     const txt = document.getElementById('wa-txt');
     if(dot) dot.className='status-dot red';
-    if(txt) txt.textContent='Erro ao conectar API';
+    if(txt) txt.textContent='Backend offline';
   }
 }
 function renderQR(qrString){
